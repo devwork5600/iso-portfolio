@@ -1,8 +1,12 @@
 "use client";
 
+import { OrthographicCamera } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
+
+// Fixed isometric angle: equal offset on X/Y/Z looking at the origin.
+const CAMERA_POSITION: [number, number, number] = [10, 10, 10];
 
 function RotatingCube() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -23,7 +27,15 @@ function RotatingCube() {
 
 export default function Scene() {
   return (
-    <Canvas camera={{ position: [3, 3, 3], fov: 50 }}>
+    <Canvas>
+      <OrthographicCamera
+        makeDefault
+        position={CAMERA_POSITION}
+        zoom={100}
+        near={0.1}
+        far={1000}
+        onUpdate={(camera) => camera.lookAt(0, 0, 0)}
+      />
       <RotatingCube />
     </Canvas>
   );

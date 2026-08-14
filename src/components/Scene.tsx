@@ -18,16 +18,25 @@ function RotatingCube() {
   });
 
   return (
-    <mesh ref={meshRef}>
+    <mesh ref={meshRef} position={[0, 0.5, 0]} castShadow>
       <boxGeometry args={[1, 1, 1]} />
-      <meshNormalMaterial />
+      <meshStandardMaterial color="#ffb347" />
+    </mesh>
+  );
+}
+
+function Floor() {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <planeGeometry args={[10, 10]} />
+      <meshStandardMaterial color="#e5e5e5" />
     </mesh>
   );
 }
 
 export default function Scene() {
   return (
-    <Canvas>
+    <Canvas shadows>
       <OrthographicCamera
         makeDefault
         position={CAMERA_POSITION}
@@ -36,7 +45,10 @@ export default function Scene() {
         far={1000}
         onUpdate={(camera) => camera.lookAt(0, 0, 0)}
       />
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 8, 4]} intensity={1.2} castShadow />
       <RotatingCube />
+      <Floor />
     </Canvas>
   );
 }

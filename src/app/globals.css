@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --card: #f4f4f5;
-  --card-foreground: #171717;
-  --primary: #171717;
-  --primary-foreground: #ffffff;
+  /* Fixed experience background — not theme/prefers-color-scheme dependent,
+     this is the room's own color, not a page light/dark mode. */
+  --background: #383836;
+  --foreground: #ededed;
+  --card: #18181b;
+  --card-foreground: #ededed;
+  --primary: #ededed;
+  --primary-foreground: #0a0a0a;
 }
 
 @theme inline {
@@ -20,19 +22,20 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --card: #18181b;
-    --card-foreground: #ededed;
-    --primary: #ededed;
-    --primary-foreground: #0a0a0a;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Sidebar reveal targets (SidebarPanel.tsx) must start invisible via CSS,
+   not JS: relying on gsap.set() alone in a useGSAP layout effect still lets
+   a late-flipping element (e.g. a Button, which ships transition-all) flash
+   visible-then-fade under heavy main-thread load, instead of just popping
+   straight to hidden before paint. */
+.inner-span,
+.tech-item,
+.project-item,
+.action-item {
+  opacity: 0;
 }

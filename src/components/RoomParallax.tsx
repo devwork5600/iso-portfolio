@@ -50,13 +50,11 @@ export function RoomParallax({ children }: { children: ReactNode }) {
     if (!groupRef.current) return;
     if (PARALLAX_DISABLED_FOR_TUNING || useInteractionStore.getState().clickedObject) return;
 
-    // Kept modest so the background Plane (a huge but still finite flat
-    // quad, scale 154.769 — see PartOneModel.tsx) doesn't tilt past the
-    // grazing angle where the camera's fixed rays overshoot its edge near
-    // the bottom of frame. Scaling the plane up instead (rather than
-    // limiting tilt) was tried and reverted — it stretches its baked UV
-    // texture, since scale changes the mesh's world size without touching
-    // its fixed UV mapping into the shared Part-1.jpg atlas.
+    // Kept modest so the room doesn't tilt past the grazing angle where the
+    // camera's fixed rays overshoot the visible geometry near the bottom of
+    // frame. (Part-1.glb's re-export dropped the old background "Plane"
+    // node this was originally tuned around — the same tilt limits are kept
+    // since they still read correctly against the current room geometry.)
     const targetYaw = pointer.x * Math.PI * 0.012;
     const targetPitch = pointer.y * Math.PI * 0.018;
 

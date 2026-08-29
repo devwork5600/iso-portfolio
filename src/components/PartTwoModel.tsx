@@ -102,7 +102,9 @@ type GLTFResult = GLTF & {
 // so a single unlit material is shared across every mesh instead of PBR shading,
 // except the 5 photos (real website screenshots, moved here from Part-4).
 export function PartTwoModel(props: JSX.IntrinsicElements["group"]) {
-  const { nodes } = useGLTF("/models/Part-2.glb") as unknown as GLTFResult;
+  // Part-2.glb is Draco-compressed — see PartOneModel.tsx's useGLTF call for
+  // why the second arg points at the self-hosted decoder in public/draco/.
+  const { nodes } = useGLTF("/models/Part-2.glb", "/draco/") as unknown as GLTFResult;
   const bakedTexture = useTexture("/textures/Part-2.jpg");
 
   const bakedMaterial = useMemo(() => {
@@ -203,7 +205,7 @@ export function PartTwoModel(props: JSX.IntrinsicElements["group"]) {
       <mesh geometry={nodes.Cube999.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.Cylinder.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.Cylinder001.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
-      <mesh geometry={nodes.KALLRÖR_HANDLE_213MM001.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
+      <mesh geometry={nodes.KALLRÖR_HANDLE_213MM001.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.911]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.KALLRÖR_HANDLE_213MM002.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.king.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.king2.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
@@ -227,16 +229,16 @@ export function PartTwoModel(props: JSX.IntrinsicElements["group"]) {
       <mesh geometry={nodes.pawn005.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.pawn006.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.pawn007.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
-      <mesh geometry={nodes["Photo-1"].geometry} material={photo1Material} position={[-5.269, 9.061, -1.275]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.607} />
-      <mesh geometry={nodes["Photo-2"].geometry} material={photo2Material} position={[-5.281, 9.061, 0.179]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.709} />
-      <mesh geometry={nodes["Photo-3"].geometry} material={photo3Material} position={[-5.292, 9, 1.591]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.607} />
-      <mesh geometry={nodes["Photo-4"].geometry} material={photo4Material} position={[-5.275, 7.838, -0.732]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.949} />
-      <mesh geometry={nodes["Photo-5"].geometry} material={photo5Material} position={[-5.289, 7.797, 0.978]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.885} />
-      <mesh geometry={nodes["PhotoFrame-1"].geometry} material={bakedMaterial} position={[-5.269, 9.061, -1.275]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.607} />
-      <mesh geometry={nodes["PhotoFrame-2"].geometry} material={bakedMaterial} />
-      <mesh geometry={nodes["PhotoFrame-3"].geometry} material={bakedMaterial} />
-      <mesh geometry={nodes["PhotoFrame-4"].geometry} material={bakedMaterial} position={[-5.275, 7.838, -0.732]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.949} />
-      <mesh geometry={nodes["PhotoFrame-5"].geometry} material={bakedMaterial} position={[-5.289, 7.797, 0.978]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.885} />
+      <mesh geometry={nodes["Photo-1"].geometry} material={photo1Material} position={[-5.269, 9.061, 2.906]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.607} />
+      <mesh geometry={nodes["Photo-2"].geometry} material={photo2Material} position={[-5.281, 9.061, 4.36]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.709} />
+      <mesh geometry={nodes["Photo-3"].geometry} material={photo3Material} position={[-5.292, 9, 5.773]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.607} />
+      <mesh geometry={nodes["Photo-4"].geometry} material={photo4Material} position={[-5.275, 7.838, 3.449]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.949} />
+      <mesh geometry={nodes["Photo-5"].geometry} material={photo5Material} position={[-5.289, 7.797, 5.159]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.885} />
+      <mesh geometry={nodes["PhotoFrame-1"].geometry} material={bakedMaterial} position={[-5.269, 9.061, 2.906]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.607} />
+      <mesh geometry={nodes["PhotoFrame-2"].geometry} material={bakedMaterial} position={[0, 0, 4.181]} />
+      <mesh geometry={nodes["PhotoFrame-3"].geometry} material={bakedMaterial} position={[0, 0, 4.181]} />
+      <mesh geometry={nodes["PhotoFrame-4"].geometry} material={bakedMaterial} position={[-5.275, 7.838, 3.449]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.949} />
+      <mesh geometry={nodes["PhotoFrame-5"].geometry} material={bakedMaterial} position={[-5.289, 7.797, 5.159]} rotation={[Math.PI / 2, 0, -1.563]} scale={1.885} />
       <mesh geometry={nodes.queen.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.queen2.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
       <mesh geometry={nodes.rook.geometry} material={bakedMaterial} position={[2.071, 1.608, 1.946]} rotation={[0, 0.76, 0]} scale={1.727} />
@@ -258,5 +260,5 @@ export function PartTwoModel(props: JSX.IntrinsicElements["group"]) {
   );
 }
 
-useGLTF.preload("/models/Part-2.glb");
+useGLTF.preload("/models/Part-2.glb", "/draco/");
 useTexture.preload("/textures/Part-2.jpg");

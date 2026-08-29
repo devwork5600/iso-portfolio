@@ -36,7 +36,6 @@ type GLTFResult = GLTF & {
     pasted__sofabuttons_pasted__buttonsmat1_0001: THREE.Mesh;
     pasted__sofalegs_pasted__sofalegsShape_bakedmtl2_0: THREE.Mesh;
     Floor: THREE.Mesh;
-    Plane: THREE.Mesh;
     wall: THREE.Mesh;
     win_singleRectangleClosed: THREE.Mesh;
     Yucca_plant: THREE.Mesh;
@@ -49,7 +48,10 @@ type GLTFResult = GLTF & {
 // The wall clock now lives here (moved out of Part-4) — its hands still rotate
 // to the real current time, same logic as PartFourModel's clock.
 export function PartOneModel(props: JSX.IntrinsicElements["group"]) {
-  const { nodes } = useGLTF("/models/Part-1.glb") as unknown as GLTFResult;
+  // Part-1.glb is Draco-compressed — the second arg points useGLTF at the
+  // self-hosted decoder in public/draco/ (copied from
+  // three/examples/jsm/libs/draco/gltf/) instead of drei's default CDN path.
+  const { nodes } = useGLTF("/models/Part-1.glb", "/draco/") as unknown as GLTFResult;
   const bakedTexture = useTexture("/textures/Part-1.jpg");
 
   const bakedMaterial = useMemo(() => {
@@ -75,7 +77,7 @@ export function PartOneModel(props: JSX.IntrinsicElements["group"]) {
 
   return (
     <group {...props} dispose={null}>
-      <group position={[3.549, -6.751, 8.029]} rotation={[-1.604, 0.094, -1.173]} scale={1.051}>
+      <group position={[3.549, -7.159, 2.128]} rotation={[-1.604, 0.094, -1.173]} scale={1.051}>
         <mesh
           geometry={nodes["-FREE-_Wall_Clock001"].geometry}
           material={bakedMaterial}
@@ -122,7 +124,7 @@ export function PartOneModel(props: JSX.IntrinsicElements["group"]) {
       <group position={[-3.256, 2.325, 3.226]} rotation={[-Math.PI / 2, 0, 1.567]} scale={0.006}>
         <group rotation={[Math.PI / 2, 0, 0]}>
           <group position={[516.027, -370.667, 517.222]} rotation={[0, -1.567, 0]} scale={159.394}>
-            <mesh geometry={nodes.pasted__sofalegs_pasted__sofalegsShape_bakedmtl2_0.geometry} material={bakedMaterial} position={[-3.403, 2.437, 3.251]} />
+            <mesh geometry={nodes.pasted__sofalegs_pasted__sofalegsShape_bakedmtl2_0.geometry} material={bakedMaterial} position={[5.851, 5.541, 8.098]} />
           </group>
           <mesh geometry={nodes.pasted__sodametals_pasted__coopermat1_0.geometry} material={bakedMaterial} position={[-0.084, -4.267, -44.043]} rotation={[-Math.PI / 2, 0, 0]} scale={0.5} />
           <mesh geometry={nodes.pasted__sofabody2_pasted__sofabody2Shape_bakedmtl2_0001.geometry} material={bakedMaterial} position={[0, -4.267, 0]} />
@@ -130,7 +132,6 @@ export function PartOneModel(props: JSX.IntrinsicElements["group"]) {
         </group>
       </group>
       <mesh geometry={nodes.Floor.geometry} material={bakedMaterial} />
-      <mesh geometry={nodes.Plane.geometry} material={bakedMaterial} position={[-1.204, 0.633, -2.319]} scale={154.769} />
       <mesh geometry={nodes.wall.geometry} material={bakedMaterial} position={[-0.048, 7.096, -0.558]} rotation={[0, 0.778, 0]} scale={1.829} />
       <mesh geometry={nodes.win_singleRectangleClosed.geometry} material={bakedMaterial} position={[-2.154, 8.289, -4.501]} rotation={[0, 0.778, 0]} scale={1.829} />
       <mesh geometry={nodes.Yucca_plant.geometry} material={bakedMaterial} position={[-3.98, 2.326, -3.195]} rotation={[Math.PI, -1.454, Math.PI]} scale={2.834} />
@@ -138,5 +139,5 @@ export function PartOneModel(props: JSX.IntrinsicElements["group"]) {
   );
 }
 
-useGLTF.preload("/models/Part-1.glb");
+useGLTF.preload("/models/Part-1.glb", "/draco/");
 useTexture.preload("/textures/Part-1.jpg");

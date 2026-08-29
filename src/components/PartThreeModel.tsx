@@ -6,13 +6,13 @@ import { CoffeeSmoke } from "@/components/CoffeeSmoke";
 
 type GLTFResult = GLTF & {
   nodes: {
+    coffe: THREE.Mesh;
     Object001: THREE.Mesh;
     Computer_Computer_0: THREE.Mesh;
     Desk_Desk_0001: THREE.Mesh;
     Drawer01_Desk_0001: THREE.Mesh;
     Drawer02_Desk_0001: THREE.Mesh;
     Drawer03_Desk_0001: THREE.Mesh;
-    Bulb: THREE.Mesh;
     bulb_base: THREE.Mesh;
     lamp__shade: THREE.Mesh;
     legs: THREE.Mesh;
@@ -86,11 +86,15 @@ type GLTFResult = GLTF & {
 // Lighting is pre-baked into /textures/Part-3.jpg (mapped via each mesh's UV0),
 // so a single unlit material is shared across every mesh except the screens,
 // which get a live video texture instead (laptop-screen001, screen-1, screen-2).
-// The desk's loudspeakers were removed in this export; the lamp now also has
-// a separate Bulb mesh, and the old "Circle_Rug001" mesh was renamed to
-// "Mouse_carpet".
+// The desk's loudspeakers were removed in this export, and the old
+// "Circle_Rug001" mesh was renamed to "Mouse_carpet". A later re-export added
+// a "coffe" mesh (the coffee liquid disc inside the mug, sibling of
+// Object001 in the same group) and removed the separate "Bulb" mesh from the
+// lamp group.
 export function PartThreeModel(props: JSX.IntrinsicElements["group"]) {
-  const { nodes } = useGLTF("/models/Part-3.glb") as unknown as GLTFResult;
+  // Part-3.glb is Draco-compressed — see PartOneModel.tsx's useGLTF call for
+  // why the second arg points at the self-hosted decoder in public/draco/.
+  const { nodes } = useGLTF("/models/Part-3.glb", "/draco/") as unknown as GLTFResult;
   const bakedTexture = useTexture("/textures/Part-3.jpg");
   const videoTexture = useVideoTexture("/videos/dev-1.webm");
 
@@ -113,6 +117,13 @@ export function PartThreeModel(props: JSX.IntrinsicElements["group"]) {
           geometry={nodes.Object001.geometry}
           material={bakedMaterial}
           position={[-0.012, -0.055, -0.035]}
+          rotation={[0, -0.257, 0]}
+          scale={0.858}
+        />
+        <mesh
+          geometry={nodes.coffe.geometry}
+          material={bakedMaterial}
+          position={[-0.012, -0.061, -0.035]}
           rotation={[0, -0.257, 0]}
           scale={0.858}
         />
@@ -158,7 +169,6 @@ export function PartThreeModel(props: JSX.IntrinsicElements["group"]) {
         </group>
       </group>
       <group position={[4.289, 5.193, 7.59]} rotation={[0, 0.528, 0]} scale={1.977}>
-        <mesh geometry={nodes.Bulb.geometry} material={bakedMaterial} position={[0, 0.374, 0]} />
         <mesh geometry={nodes.bulb_base.geometry} material={bakedMaterial} position={[0, 0.338, 0]} />
         <mesh geometry={nodes.lamp__shade.geometry} material={bakedMaterial} position={[0, 0.431, 0]} />
         <mesh geometry={nodes.legs.geometry} material={bakedMaterial} position={[0.043, 0.141, 0]} />
@@ -599,5 +609,5 @@ export function PartThreeModel(props: JSX.IntrinsicElements["group"]) {
   );
 }
 
-useGLTF.preload("/models/Part-3.glb");
+useGLTF.preload("/models/Part-3.glb", "/draco/");
 useTexture.preload("/textures/Part-3.jpg");

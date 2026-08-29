@@ -131,8 +131,8 @@ export function HitBoxes(props: JSX.IntrinsicElements["group"]) {
   const cornersMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#ffb347",
-        emissive: "#ffb347",
+        color: "#d8b18d",
+        emissive: "#d8b18d",
         emissiveIntensity: 2,
       }),
     [],
@@ -143,10 +143,10 @@ export function HitBoxes(props: JSX.IntrinsicElements["group"]) {
       <HitBoxTrigger
         name="Clock"
         boxGeometry={nodes.Cube002.geometry}
-        boxPosition={[-5.224, 8.93, 5.051]}
+        boxPosition={[-5.224, 8.537, -0.852]}
         boxScale={[0.088, 0.824, 0.824]}
         cornersGeometry={nodes.Cube013.geometry}
-        cornersPosition={[-5.135, 8.924, 5.112]}
+        cornersPosition={[-5.135, 8.531, -0.792]}
         cornersScale={1}
         hitBoxMaterial={hitBoxMaterial}
         cornersMaterial={cornersMaterial}
@@ -154,10 +154,10 @@ export function HitBoxes(props: JSX.IntrinsicElements["group"]) {
       <HitBoxTrigger
         name="Photos"
         boxGeometry={nodes.Cube012.geometry}
-        boxPosition={[-5.236, 8.402, 0.147]}
+        boxPosition={[-5.236, 8.402, 4.272]}
         boxScale={[0.041, 1.18, 2.152]}
         cornersGeometry={nodes.Cube014.geometry}
-        cornersPosition={[-5.236, 8.402, 0.147]}
+        cornersPosition={[-5.236, 8.402, 4.272]}
         cornersScale={1}
         hitBoxMaterial={hitBoxMaterial}
         cornersMaterial={cornersMaterial}

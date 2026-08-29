@@ -27,7 +27,7 @@ export function Sidebar() {
           <button
             onClick={() => setClickedObject(null)}
             className="text-foreground hover:bg-background absolute top-0 right-0 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md"
-            aria-label="Close"
+            aria-label="Fermer"
           >
             <X className="h-5 w-5" />
           </button>

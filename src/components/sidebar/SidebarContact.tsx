@@ -10,7 +10,7 @@ export function SidebarContact({ object }: { object: InteractiveObject }) {
       <div className="content-block">
         <Button className="action-item w-full" asChild>
           <a href="/pdf/visit-card.pdf" download>
-            Download business card
+            Télécharger ma carte de visite
           </a>
         </Button>
       </div>

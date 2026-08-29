@@ -65,7 +65,11 @@ export function Loader() {
 
   if (isDone) return null;
 
-  const width = 120;
+  // Wide enough for "Chargement" at text-2xl with a little margin either
+  // side — bumped up from the original 120px, which fit "Loading" but
+  // overlapped the card's rounded-rect border once the French label (10
+  // chars vs. 7) took its place.
+  const width = 180;
   const height = 100;
   const strokeWidth = 2;
   const perimeter = (width - strokeWidth) * 2 + (height - strokeWidth) * 2;
@@ -77,7 +81,7 @@ export function Loader() {
         ref={topRef}
         className="absolute top-0 right-0 left-0 flex h-[calc(50%+1px)] items-end justify-center bg-black"
       >
-        <div className="relative h-[100px] w-[120px]" style={{ perspective: "1000px" }}>
+        <div className="relative h-[100px]" style={{ width, perspective: "1000px" }}>
           <div
             ref={cardRef}
             className="absolute top-[-30px] h-[100px] w-full text-2xl"
@@ -122,7 +126,7 @@ export function Loader() {
                   style={{ transition: "stroke-dashoffset 0.3s ease" }}
                 />
               </svg>
-              <span className="pointer-events-auto text-[#d8b18d]">Loading</span>
+              <span className="pointer-events-auto text-[#d8b18d]">Chargement</span>
             </div>
 
             {/* BACK SIDE */}
@@ -139,7 +143,7 @@ export function Loader() {
                     : "opacity-0"
                 }`}
               >
-                Enter
+                Entrer
               </button>
             </div>
           </div>

@@ -150,7 +150,7 @@ export const interactiveObjects: InteractiveObject[] = [
   {
     name: "Library",
     ...customDeviceTransforms([7.2, 7.8, 4.861888696806017], [-1.8, 1.44, 0.36], 300),
-    title: "Library",
+    title: "Bibliothèque",
     blocks: [
       {
         type: "text",
@@ -194,6 +194,7 @@ export const interactiveObjects: InteractiveObject[] = [
           { icon: "/icons/tailwind.svg", name: "Tailwind" },
           { icon: "/icons/shadcn.svg", name: "shadcn/ui" },
           { icon: "/icons/gsap.svg", name: "GSAP" },
+          { icon: "/icons/docker.svg", name: "Docker" },
         ],
       },
       {
@@ -206,20 +207,20 @@ export const interactiveObjects: InteractiveObject[] = [
   {
     name: "Clock",
     ...customDeviceTransformsQuat([-4, 8.56, -1.47], [-0.00157, 0.726386, 0, 0.687284], 190),
-    title: "Clock",
+    title: "Horloge",
     text: "Placeholder copy — a short note about timing, process, or whatever this corner is meant to represent.",
   },
   {
     name: "Particles",
     ...customDeviceTransforms([5, 10, 4.861888696806017], [-1.8, 1.44, 0.3], 203),
-    title: "Particles",
+    title: "Particules",
     text: "A morphing particle shader experiment, built with Three.js and custom GLSL — click to toggle between shapes. Placeholder copy — describe the technique here.",
   },
   {
     name: "Contact",
     ...deviceTransforms(CONTACT_POS, 160),
     title: "Contact",
-    text: "Always open to new projects — reach out, or grab my details below.",
+    text: "Toujours ouvert à de nouveaux projets — n'hésitez pas à me contacter, ou récupérez mes coordonnées ci-dessous.",
   },
   {
     name: "Photos",

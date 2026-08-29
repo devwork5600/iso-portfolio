@@ -32,6 +32,76 @@ function deviceTransforms(worldPoint: THREE.Vector3 | null, desktopZoom: number)
   };
 }
 
+// For hotspots hand-tuned directly via CameraGUI (position + Euler rotation
+// dragged live, not derived from frameHotspot's fixed-isometric pan) —
+// breaks from the "same orientation every view, only panned" rule the rest
+// of the file follows, but that's the point: some shots (e.g. a wall-mounted
+// object viewed flat-on) need their own free camera angle. Euler order
+// 'XYZ' matches CameraGUI's cam.rotation.set(x, y, z) (three.js's default).
+// Tablet/mobile aren't hand-tuned per breakpoint yet, so they reuse the
+// same desktop position/rotation and only scale zoom, same ratios as
+// deviceTransforms — replace with their own customTransform() once tuned.
+function customTransform(
+  position: [number, number, number],
+  eulerDeg: [number, number, number],
+  zoom: number,
+): Transform {
+  const euler = new THREE.Euler(
+    THREE.MathUtils.degToRad(eulerDeg[0]),
+    THREE.MathUtils.degToRad(eulerDeg[1]),
+    THREE.MathUtils.degToRad(eulerDeg[2]),
+    "XYZ",
+  );
+  return {
+    targetPosition: position,
+    targetQuaternion: new THREE.Quaternion().setFromEuler(euler).toArray() as [number, number, number, number],
+    zoom,
+  };
+}
+
+function customDeviceTransforms(
+  position: [number, number, number],
+  eulerDeg: [number, number, number],
+  desktopZoom: number,
+) {
+  return {
+    desktop: customTransform(position, eulerDeg, desktopZoom),
+    tablet: customTransform(position, eulerDeg, desktopZoom * 0.82),
+    mobile: customTransform(position, eulerDeg, desktopZoom * 0.65),
+  };
+}
+
+// Same as customTransform/customDeviceTransforms above, but reads straight
+// off CameraGUI's Quaternion panel (X/Y/Z/W) — no Euler round-trip.
+function customTransformQuat(
+  position: [number, number, number],
+  quaternion: [number, number, number, number],
+  zoom: number,
+): Transform {
+  return {
+    targetPosition: position,
+    targetQuaternion: new THREE.Quaternion(...quaternion).normalize().toArray() as [
+      number,
+      number,
+      number,
+      number,
+    ],
+    zoom,
+  };
+}
+
+function customDeviceTransformsQuat(
+  position: [number, number, number],
+  quaternion: [number, number, number, number],
+  desktopZoom: number,
+) {
+  return {
+    desktop: customTransformQuat(position, quaternion, desktopZoom),
+    tablet: customTransformQuat(position, quaternion, desktopZoom * 0.82),
+    mobile: customTransformQuat(position, quaternion, desktopZoom * 0.65),
+  };
+}
+
 export interface IntroSetting {
   name: string;
   desktop: Transform;
@@ -72,24 +142,20 @@ export interface InteractiveObject {
 }
 
 // World positions of each hitbox's box center, from HitBoxes.tsx.
-const CLOCK_POS = new THREE.Vector3(-5.224, 8.93, 5.051);
-const LIBRARY_POS = new THREE.Vector3(6.194, 7.314, -3.256);
 const CONTACT_POS = new THREE.Vector3(5.317, 5.371, 7.335);
-const PARTICLES_POS = new THREE.Vector3(3.486, 9.749, -3.662);
-const PHOTOS_POS = new THREE.Vector3(-5.236, 8.402, 0.147);
 
 // Placeholder zoom values — starting guesses, meant to be hand-tuned live
 // in-browser (the one genuinely per-hotspot constant that needs eyeballing).
 export const interactiveObjects: InteractiveObject[] = [
   {
     name: "Library",
-    ...deviceTransforms(LIBRARY_POS, 110),
+    ...customDeviceTransforms([7.2, 7.8, 4.861888696806017], [-1.8, 1.44, 0.36], 300),
     title: "Library",
     blocks: [
       {
         type: "text",
         content:
-          "A shelf of the tools I reach for most. Swap this copy for your own stack breakdown.",
+          "J’ai commencé mon parcours de développeur par une formation centrée sur les bases du web. Cette première expérience m’a permis d’acquérir une compréhension solide du développement et des fondamentaux du code.",
       },
       {
         type: "techList",
@@ -97,24 +163,55 @@ export const interactiveObjects: InteractiveObject[] = [
           { icon: "/icons/html-5.svg", name: "HTML" },
           { icon: "/icons/css-3.svg", name: "CSS" },
           { icon: "/icons/js.svg", name: "JavaScript" },
+          { icon: "/icons/sql.svg", name: "SQL" },
+          { icon: "/icons/php.svg", name: "PHP" },
+        ],
+      },
+      {
+        type: "text",
+        content:
+          "Par la suite, je me suis orienté vers le MERN stack, ce qui m’a permis d’élargir mes compétences et de gagner en autonomie sur la création d’applications complètes, du front au back.",
+      },
+      {
+        type: "techList",
+        items: [
+          { icon: "/icons/mongodb.svg", name: "MongoDB" },
+          { icon: "/icons/express.svg", name: "Express" },
           { icon: "/icons/react.svg", name: "React" },
-          { icon: "/icons/nextjs.svg", name: "Next.js" },
-          { icon: "/icons/tailwind.svg", name: "Tailwind" },
           { icon: "/icons/nodejs.svg", name: "Node.js" },
+        ],
+      },
+      {
+        type: "text",
+        content:
+          "Aujourd’hui, je travaille principalement avec un écosystème moderne que j’utilise pour concevoir des interfaces dynamiques, fluides et immersives.",
+      },
+      {
+        type: "techList",
+        items: [
+          { icon: "/icons/nextjs.svg", name: "Next.js" },
+          { icon: "/icons/typescript.svg", name: "TypeScript" },
+          { icon: "/icons/tailwind.svg", name: "Tailwind" },
+          { icon: "/icons/shadcn.svg", name: "shadcn/ui" },
           { icon: "/icons/gsap.svg", name: "GSAP" },
         ],
+      },
+      {
+        type: "text",
+        content:
+          "Toujours curieux et passionné, j’aime découvrir de nouveaux outils, expérimenter et me tenir à jour sur les dernières évolutions du développement web.",
       },
     ],
   },
   {
     name: "Clock",
-    ...deviceTransforms(CLOCK_POS, 150),
+    ...customDeviceTransformsQuat([-4, 8.56, -1.47], [-0.00157, 0.726386, 0, 0.687284], 190),
     title: "Clock",
     text: "Placeholder copy — a short note about timing, process, or whatever this corner is meant to represent.",
   },
   {
     name: "Particles",
-    ...deviceTransforms(PARTICLES_POS, 90),
+    ...customDeviceTransforms([5, 10, 4.861888696806017], [-1.8, 1.44, 0.3], 203),
     title: "Particles",
     text: "A morphing particle shader experiment, built with Three.js and custom GLSL — click to toggle between shapes. Placeholder copy — describe the technique here.",
   },
@@ -126,7 +223,7 @@ export const interactiveObjects: InteractiveObject[] = [
   },
   {
     name: "Photos",
-    ...deviceTransforms(PHOTOS_POS, 70),
+    ...customDeviceTransforms([8.3, 8.4, 3], [-27, 89.64, 26.9], 160),
     title: "Photos",
     blocks: [
       {

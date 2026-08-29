@@ -1,7 +1,7 @@
 "use client";
 
 import gsap from "gsap";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { interactiveObjects, introSettings } from "@/data/interactiveObjects";
 import useCamera from "@/store/useCamera";
@@ -26,6 +26,12 @@ export function useCameraManager({
 
   const isMobile = useResponsiveStore((s) => s.isMobile);
   const isTablet = useResponsiveStore((s) => s.isTablet);
+
+  // Stable proxy object driving the quaternion slerp tween below — must
+  // persist across effect re-runs (unlike a fresh {t: 0} literal each time)
+  // so gsap.killTweensOf can find and interrupt an in-flight one when the
+  // user switches views again before it finishes.
+  const quaternionProgress = useRef({ t: 0 }).current;
 
   const getTransformForDevice = useCallback(
     (name: string) => {
@@ -60,7 +66,7 @@ export function useCameraManager({
     const duration = CAMERA_TRANSITION_DURATION;
     const ease = "power3.inOut";
 
-    gsap.killTweensOf([cam.position, cam.quaternion, cam]);
+    gsap.killTweensOf([cam.position, cam.quaternion, cam, quaternionProgress]);
 
     gsap.to(cam.position, {
       duration,
@@ -71,14 +77,29 @@ export function useCameraManager({
       overwrite: true,
     });
 
-    gsap.to(cam.quaternion, {
+    // Quaternions don't linearly interpolate component-by-component — lerping
+    // x/y/z/w independently (as gsap.to(cam.quaternion, {x, y, z, w}) did)
+    // produces a non-unit, warped rotation at every point except the exact
+    // start/end, since the correct path between two orientations is a great
+    // circle (slerp), not a straight line through 4D quaternion space. This
+    // was invisible while every view shared nearly the same fixed isometric
+    // orientation (barely any rotation to interpolate), but once hotspots
+    // got their own hand-tuned orientations (see interactiveObjects.ts's
+    // customTransform) a large swing between two very different orientations
+    // — e.g. InitialView's fixed angle to Photos' custom one — visibly
+    // wobbles/warps mid-transition. Driving slerp via a plain 0->1 progress
+    // tween keeps GSAP's easing/duration but interpolates rotation correctly.
+    const startQuaternion = cam.quaternion.clone();
+    const endQuaternion = targetQuaternion.clone();
+    quaternionProgress.t = 0;
+    gsap.to(quaternionProgress, {
+      t: 1,
       duration,
-      x: targetQuaternion.x,
-      y: targetQuaternion.y,
-      z: targetQuaternion.z,
-      w: targetQuaternion.w,
       ease,
       overwrite: true,
+      onUpdate: () => {
+        cam.quaternion.slerpQuaternions(startQuaternion, endQuaternion, quaternionProgress.t);
+      },
     });
 
     gsap.to(cam, {
@@ -88,5 +109,5 @@ export function useCameraManager({
       overwrite: true,
       onUpdate: () => cam.updateProjectionMatrix(),
     });
-  }, [targetPosition, targetQuaternion, zoom, camera]);
+  }, [targetPosition, targetQuaternion, zoom, camera, quaternionProgress]);
 }

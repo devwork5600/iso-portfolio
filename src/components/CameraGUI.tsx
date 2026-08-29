@@ -6,19 +6,31 @@ import { GUI } from "lil-gui";
 import type { Controller } from "lil-gui";
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
-import type * as THREE from "three";
+import * as THREE from "three";
 
-// Dev-only live camera tuning. Position/quaternion here are normally
+// Dev-only live camera tuning. Position/rotation here are normally
 // *derived* per view (baked at module load in interactiveObjects.ts via
 // frameHotspot(BASE_POSITION, BASE_TARGET, worldPoint)), so dragging them
 // won't correspond to anything reusable in source the way Zoom does — but
 // they're still live-editable (not disabled) for direct in-browser
-// exploration, matching isoroom-v3's CameraGUI. Quaternion, not Euler:
-// interactiveObjects.ts's Transform.targetQuaternion and
-// useCameraManager.ts's GSAP tween both use quaternion directly — Euler
-// never appears anywhere in the camera pipeline.
+// exploration, matching isoroom-v3's CameraGUI. Euler (degrees), not
+// quaternion: interactiveObjects.ts stores Transform.targetQuaternion and
+// useCameraManager.ts's slerp tween both use quaternion directly, but XYZW
+// components aren't something a human can reason about while dragging —
+// Euler is only for this panel's human-facing editing/reading. cam.rotation
+// and cam.quaternion are kept in sync automatically by three.js in both
+// directions (Object3D wires each to update the other on change), so
+// setting cam.rotation here is enough; no manual conversion needed.
 export function CameraGUI({ camera }: { camera: RefObject<THREE.OrthographicCamera | null> }) {
-  const controlsRef = useRef({ posX: 0, posY: 0, posZ: 0, qx: 0, qy: 0, qz: 0, qw: 0, zoom: 0 });
+  const controlsRef = useRef({
+    posX: 0,
+    posY: 0,
+    posZ: 0,
+    rotXDeg: 0,
+    rotYDeg: 0,
+    rotZDeg: 0,
+    zoom: 0,
+  });
   const controllersRef = useRef<Controller[]>([]);
   const draggingRef = useRef(false);
 
@@ -36,29 +48,30 @@ export function CameraGUI({ camera }: { camera: RefObject<THREE.OrthographicCame
       cam.position.set(controls.posX, controls.posY, controls.posZ);
     };
 
-    const onQuaternionChange = () => {
+    const onRotationChange = () => {
       const cam = camera.current;
       if (!cam) return;
       gsap.killTweensOf(cam.quaternion);
-      cam.quaternion.set(controls.qx, controls.qy, controls.qz, controls.qw).normalize();
+      cam.rotation.set(
+        THREE.MathUtils.degToRad(controls.rotXDeg),
+        THREE.MathUtils.degToRad(controls.rotYDeg),
+        THREE.MathUtils.degToRad(controls.rotZDeg),
+      );
     };
 
     const positionFolder = gui.addFolder("Position");
-    const quaternionFolder = gui.addFolder("Quaternion");
+    const rotationFolder = gui.addFolder("Rotation (Euler, deg)");
     controllersRef.current = [
-      positionFolder.add(controls, "posX", -50, 50).name("X").onChange(onPositionChange),
-      positionFolder.add(controls, "posY", -50, 50).name("Y").onChange(onPositionChange),
-      positionFolder.add(controls, "posZ", -50, 50).name("Z").onChange(onPositionChange),
-      quaternionFolder.add(controls, "qx", -1, 1).name("X").onChange(onQuaternionChange),
-      quaternionFolder.add(controls, "qy", -1, 1).name("Y").onChange(onQuaternionChange),
-      quaternionFolder.add(controls, "qz", -1, 1).name("Z").onChange(onQuaternionChange),
-      quaternionFolder.add(controls, "qw", -1, 1).name("W").onChange(onQuaternionChange),
+      positionFolder.add(controls, "posX", -200, 200).name("X").onChange(onPositionChange),
+      positionFolder.add(controls, "posY", -200, 200).name("Y").onChange(onPositionChange),
+      positionFolder.add(controls, "posZ", -200, 200).name("Z").onChange(onPositionChange),
+      rotationFolder.add(controls, "rotXDeg", -180, 180).name("X").onChange(onRotationChange),
+      rotationFolder.add(controls, "rotYDeg", -180, 180).name("Y").onChange(onRotationChange),
+      rotationFolder.add(controls, "rotZDeg", -180, 180).name("Z").onChange(onRotationChange),
     ];
 
     // While a field is actively being dragged, useFrame below must not
-    // overwrite the control with the live camera value — normalize() after
-    // a quaternion edit, in particular, changes the other components too,
-    // which would otherwise fight the field still under the pointer.
+    // overwrite the control with the live camera value.
     for (const controller of controllersRef.current) {
       controller.domElement.addEventListener("pointerdown", () => {
         draggingRef.current = true;
@@ -96,10 +109,9 @@ export function CameraGUI({ camera }: { camera: RefObject<THREE.OrthographicCame
     controls.posX = cam.position.x;
     controls.posY = cam.position.y;
     controls.posZ = cam.position.z;
-    controls.qx = cam.quaternion.x;
-    controls.qy = cam.quaternion.y;
-    controls.qz = cam.quaternion.z;
-    controls.qw = cam.quaternion.w;
+    controls.rotXDeg = THREE.MathUtils.radToDeg(cam.rotation.x);
+    controls.rotYDeg = THREE.MathUtils.radToDeg(cam.rotation.y);
+    controls.rotZDeg = THREE.MathUtils.radToDeg(cam.rotation.z);
 
     for (const controller of controllersRef.current) controller.updateDisplay();
   });

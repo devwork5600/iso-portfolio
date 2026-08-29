@@ -2,6 +2,7 @@
 
 import { Loader } from "@/components/Loader";
 import { NavPad } from "@/components/NavPad";
+import { OrientationModal } from "@/components/OrientationModal";
 import { ResponsiveHandler } from "@/components/ResponsiveHandler";
 import Scene from "@/components/Scene";
 import { Sidebar } from "@/components/sidebar/Sidebar";
@@ -14,6 +15,7 @@ export default function Home() {
       <NavPad />
       <Sidebar />
       <ResponsiveHandler />
+      <OrientationModal />
     </div>
   );
 }

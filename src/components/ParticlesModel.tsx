@@ -3,14 +3,19 @@
 import { useGLTF, shaderMaterial } from "@react-three/drei";
 import { useFrame, extend } from "@react-three/fiber";
 import gsap from "gsap";
-import { JSX, useMemo, useRef, useEffect, useCallback, useState } from "react";
+import { JSX, useMemo, useRef, useEffect, useCallback } from "react";
 import * as THREE from "three";
+import { CAMERA_TRANSITION_DURATION } from "@/hooks/useCameraManager";
+import useInteractionStore from "@/store/useInteractionStore";
+import { useMorphStore } from "@/store/useMorphStore";
 
 // Ported from room4's src/components/MorphParticles.tsx, adapted to this
-// project's Particules.glb node names (three-js / suzanne001) and a local
-// click-to-toggle trigger. Particules.glb also contains a third node,
-// Cube001, sitting far from the other two (~[1.8, 1.0, 1.7] vs ~[3.9, 10.4,
-// -4.8]) — it's excluded here, kept as a simple two-shape toggle like room4.
+// project's Particules.glb node names (three-js / suzanne001). Morph target
+// is driven by useMorphStore (set via the two buttons in the Particles
+// sidebar panel, isoroom-v3-style), not a click on the particles
+// themselves. Particules.glb also contains a third node, Cube001, sitting
+// far from the other two (~[1.8, 1.0, 1.7] vs ~[3.9, 10.4, -4.8]) — it's
+// excluded here, kept as a simple two-shape toggle like room4.
 // Each shape's own node transform (position/quaternion/scale, as loaded by
 // GLTFLoader) is applied per-vertex when building the morph target buffers
 // below, so this stays correct regardless of whether a given re-export
@@ -85,7 +90,8 @@ float simplexNoise3d(vec3 v)
 
 // ----------------- Shader uniforms -----------------
 uniform vec2 uResolution;
-uniform float uSize;
+uniform float uSizeAll;
+uniform float uSizeSelected;
 uniform float uProgress;
 uniform vec3 uColorA;
 uniform vec3 uColorB;
@@ -116,9 +122,14 @@ void main()
     gl_Position=projectedPosition;
 
 
-    // Point size
-    gl_PointSize=(26.0 + (uFocus*14.0));
-    gl_PointSize*=((1.)/-viewPosition.z);
+    // Point size — flat device-pixel constants, deliberately *not* scaled
+    // by projectionMatrix/zoom/distance: an earlier version scaled size by
+    // camera.zoom to read as the same world-space size at every hotspot,
+    // but that meant size visibly grew/shrank during any camera zoom tween
+    // (most noticeably the intro reveal's 16->47 zoom). A flat pixel size
+    // can't change from camera movement at all — only uFocus (selected vs
+    // not) picks between the two tunable sizes below.
+    gl_PointSize=mix(uSizeAll,uSizeSelected,uFocus);
 
     // Varyings
     vColor=mix(uColorA,uColorB,noise) * 1.8;
@@ -147,12 +158,16 @@ type GLTFResult = {
 
 const MorphParticlesMaterial = shaderMaterial(
   {
-    uSize: 0.04,
+    // Flat device-pixel sizes — starting guesses, tune directly and reload.
+    // uSizeAll is the resting/idle size (Particles hotspot not selected);
+    // uSizeSelected is used while its sidebar is open (see uFocus below).
+    uSizeAll: 1,
+    uSizeSelected: 2.8,
     uResolution: new THREE.Vector2(1, 1),
     uProgress: 0,
-    uFocus: 1,
-    uColorA: new THREE.Color("#00a2ff"),
-    uColorB: new THREE.Color("#3079ff"),
+    uFocus: 0,
+    uColorA: new THREE.Color("#ff7300"),
+    uColorB: new THREE.Color("#0091ff"),
   },
   vertexShader,
   fragmentShader,
@@ -178,8 +193,9 @@ export function ParticlesModel(props: JSX.IntrinsicElements["group"]) {
   const currentIndex = useRef(0);
   const morphTween = useRef<gsap.core.Tween | null>(null);
 
-  const [targetIndex, setTargetIndex] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const targetIndex = useMorphStore((s) => s.targetIndex);
+  const isAnimating = useMorphStore((s) => s.isAnimating);
+  const setIsAnimating = useMorphStore((s) => s.setIsAnimating);
 
   const geometryData = useMemo(() => {
     // Fixed order: index 0 = threejs text, index 1 = suzanne monkey.
@@ -255,6 +271,16 @@ export function ParticlesModel(props: JSX.IntrinsicElements["group"]) {
         {
           value: 1,
           duration: 2.5,
+          // Accelerating (not the GSAP default decelerating "power1.out"):
+          // the shader staggers each particle's own transition by noise, so
+          // the last particles don't even start moving until uProgress hits
+          // ~0.6. A decelerating tween made that tail crawl in slowly and
+          // imperceptibly, so the morph looked finished — and the click
+          // lock below still held — well before uProgress actually reached
+          // 1. Accelerating into the finish makes that tail the fastest,
+          // most visible part of the motion, so it snaps into place right
+          // as the lock releases instead of trailing off ambiguously.
+          ease: "power1.in",
           onComplete: () => {
             currentIndex.current = index;
             setIsAnimating(false);
@@ -262,7 +288,7 @@ export function ParticlesModel(props: JSX.IntrinsicElements["group"]) {
         },
       );
     },
-    [isAnimating],
+    [isAnimating, setIsAnimating],
   );
 
   useEffect(() => {
@@ -270,6 +296,31 @@ export function ParticlesModel(props: JSX.IntrinsicElements["group"]) {
       morph(targetIndex);
     }
   }, [targetIndex, morph]);
+
+  const clickedObject = useInteractionStore((s) => s.clickedObject);
+  const isSelected = clickedObject === "Particles";
+  const focusTween = useRef<gsap.core.Tween | null>(null);
+
+  // Driven by a GSAP tween using the *same* duration as the camera's own
+  // zoom tween (useCameraManager), not a per-frame lerp: a lerp always moves
+  // fastest at the very start (its rate is proportional to the remaining
+  // distance), which was outrunning the camera's zoom-in and, combined with
+  // additive blending, flashed the still-overlapping, enlarging particles
+  // overbright right at the start of the transition.
+  // ease is "none" (linear) here on request, to test without the eased-in
+  // start — the camera's own zoom tween still uses power3.inOut, so if this
+  // still flashes, try "power3.inOut" here too to fully lock the two curves.
+  useEffect(() => {
+    if (!materialRef.current) return;
+
+    focusTween.current?.kill();
+    focusTween.current = gsap.to(materialRef.current.uniforms.uFocus, {
+      value: isSelected ? 1 : 0,
+      duration: CAMERA_TRANSITION_DURATION,
+      ease: "none",
+      overwrite: true,
+    });
+  }, [isSelected]);
 
   useFrame(({ size, gl }) => {
     if (!materialRef.current) return;
@@ -288,15 +339,7 @@ export function ParticlesModel(props: JSX.IntrinsicElements["group"]) {
 
   return (
     <group {...props} dispose={null}>
-      <points
-        ref={pointsRef}
-        geometry={geometryData.geo}
-        frustumCulled={false}
-        onClick={(event) => {
-          event.stopPropagation();
-          setTargetIndex((index) => (index === 0 ? 1 : 0));
-        }}
-      >
+      <points ref={pointsRef} geometry={geometryData.geo} frustumCulled={false}>
         <morphParticlesMaterial
           ref={materialRef}
           transparent

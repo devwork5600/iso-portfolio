@@ -75,7 +75,7 @@ export function Loader() {
     <div className="pointer-events-none fixed inset-0 z-50">
       <div
         ref={topRef}
-        className="bg-background absolute top-0 right-0 left-0 flex h-[calc(50%+1px)] items-end justify-center"
+        className="absolute top-0 right-0 left-0 flex h-[calc(50%+1px)] items-end justify-center bg-black"
       >
         <div className="relative h-[100px] w-[120px]" style={{ perspective: "1000px" }}>
           <div
@@ -85,7 +85,7 @@ export function Loader() {
           >
             {/* FRONT SIDE */}
             <div
-              className="absolute flex h-full w-full items-center justify-center"
+              className="absolute flex h-full w-full items-center justify-center text-[#d8b18d]"
               style={{ backfaceVisibility: "hidden", transform: "translateZ(0)" }}
             >
               <svg
@@ -122,7 +122,7 @@ export function Loader() {
                   style={{ transition: "stroke-dashoffset 0.3s ease" }}
                 />
               </svg>
-              <span className="text-foreground bg-background pointer-events-auto">Loading</span>
+              <span className="pointer-events-auto text-[#d8b18d]">Loading</span>
             </div>
 
             {/* BACK SIDE */}
@@ -133,9 +133,9 @@ export function Loader() {
               <button
                 onClick={handleEnter}
                 disabled={!canEnter}
-                className={`text-foreground pointer-events-auto h-full w-full rounded-md px-6 py-3 transition duration-300 ${
+                className={`pointer-events-auto h-full w-full rounded-md border-2 border-[#d8b18d] px-6 py-3 text-[#d8b18d] transition duration-300 ${
                   canEnter
-                    ? "border-foreground hover:bg-foreground hover:text-background cursor-pointer border-2 opacity-100"
+                    ? "hover:bg-[#d8b18d] hover:text-black cursor-pointer opacity-100"
                     : "opacity-0"
                 }`}
               >
@@ -148,7 +148,7 @@ export function Loader() {
 
       <div
         ref={bottomRef}
-        className="bg-background absolute right-0 bottom-0 left-0 h-[calc(50%+1px)]"
+        className="absolute right-0 bottom-0 left-0 h-[calc(50%+1px)] bg-black"
       />
     </div>
   );

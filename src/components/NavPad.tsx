@@ -5,7 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import useExperienceUIStore from "@/store/useExperienceUIStore";
 import useInteractionStore from "@/store/useInteractionStore";
 
-const ACTIVE_COLOR = "#ffb347";
+const ACTIVE_COLOR = "#d8b18d";
 
 // Cross layout: one hotspot per arm, "Home" in the middle returns to
 // InitialView. Clock is reachable only by clicking the 3D clock directly
@@ -25,7 +25,7 @@ export function NavPad() {
 
   return (
     <div
-      className={`bg-background fixed bottom-4 left-4 z-50 grid gap-1 rounded-xl border-2 border-zinc-800 p-2 transition-opacity duration-500 lg:gap-2 ${
+      className={`fixed bottom-4 left-4 z-50 grid gap-1 rounded-xl border-2 border-zinc-800 bg-black/80 p-2 backdrop-blur-xl transition-opacity duration-500 lg:gap-2 ${
         experienceStarted ? "pointer-events-auto opacity-100 delay-1000" : "pointer-events-none opacity-0"
       }`}
       style={{

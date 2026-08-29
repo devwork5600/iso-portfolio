@@ -170,7 +170,7 @@ function DebugAllCells() {
         <Line
           key={`${cellU}_${cellV}`}
           points={cellDiamondPoints(cellU, cellV)}
-          color="#ffb347"
+          color="#d8b18d"
           lineWidth={2}
           toneMapped={false}
         />
@@ -271,7 +271,7 @@ export function FloorGrid() {
         <Line
           ref={lineRef}
           points={highlightPoints}
-          color="#ffb347"
+          color="#d8b18d"
           lineWidth={5.1}
           toneMapped={false}
           transparent

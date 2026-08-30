@@ -60,7 +60,8 @@ export function SidebarPanel({ object, children, footer }: SidebarPanelProps) {
         const letters = Array.from(block.querySelectorAll<HTMLElement>(".inner-span"));
         const items = Array.from(block.querySelectorAll<HTMLElement>(".tech-item, .project-item, .action-item"));
 
-        letters.forEach((el) => allElements.push({ el, yOffset: 6, duration: 0.04, stagger: 0.04, scroll: 24 }));
+        // 1.2x speed over the original 0.04/0.04 (duration/stagger).
+        letters.forEach((el) => allElements.push({ el, yOffset: 6, duration: 0.033, stagger: 0.033, scroll: 24 }));
         items.forEach((el) => allElements.push({ el, yOffset: 0, duration: 0.4, stagger: 0.15, scroll: 45.5 }));
       });
 

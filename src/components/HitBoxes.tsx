@@ -85,11 +85,12 @@ function HitBoxTrigger({
     });
   };
 
-  // Keep the corner highlight pinned on while this hitbox is the camera's
-  // current focus, regardless of hover state.
+  // Force the corner highlight hidden whenever selection state changes —
+  // once this hitbox is the camera's current focus, the highlight would
+  // just clutter the framed shot, so it stays transparent regardless of
+  // hover (onPointerOver/Out below already skip animating while selected).
   useEffect(() => {
-    animateCorners(isSelected);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    animateCorners(false);
   }, [isSelected]);
 
   return (

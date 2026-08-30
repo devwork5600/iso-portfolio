@@ -25,8 +25,15 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
  * BASE_TARGET's offset so children still render at their normal world
  * position when the outer group's rotation is identity.
  *
- * Freezes whenever a hotspot is focused (clickedObject set), so it doesn't
- * fight CameraManager's focused shot.
+ * Eases back to neutral (yaw/pitch 0) whenever a hotspot is focused
+ * (clickedObject set), rather than freezing at whatever tilt the pointer
+ * last produced — freezing in place meant the same hotspot's framed shot
+ * looked different depending on where the mouse happened to be when you
+ * triggered the selection (hovering the object directly vs. clicking a
+ * NavPad button elsewhere on screen). Targeting 0 through the same lerp
+ * that already tracks the pointer converges every trigger to the same
+ * neutral tilt, so the shot is consistent regardless of how it was
+ * reached, and doesn't fight CameraManager's focused shot once settled.
  */
 export function RoomParallax({ children }: { children: ReactNode }) {
   const { pointer } = useThree();
@@ -41,15 +48,16 @@ export function RoomParallax({ children }: { children: ReactNode }) {
 
   useFrame(() => {
     if (!groupRef.current) return;
-    if (useInteractionStore.getState().clickedObject) return;
+
+    const isFocused = !!useInteractionStore.getState().clickedObject;
 
     // Kept modest so the room doesn't tilt past the grazing angle where the
     // camera's fixed rays overshoot the visible geometry near the bottom of
     // frame. (Part-1.glb's re-export dropped the old background "Plane"
     // node this was originally tuned around — the same tilt limits are kept
     // since they still read correctly against the current room geometry.)
-    const targetYaw = pointer.x * Math.PI * 0.012;
-    const targetPitch = pointer.y * Math.PI * 0.018;
+    const targetYaw = isFocused ? 0 : pointer.x * Math.PI * 0.012;
+    const targetPitch = isFocused ? 0 : pointer.y * Math.PI * 0.018;
 
     yaw.current = THREE.MathUtils.lerp(yaw.current, targetYaw, 0.1);
     pitch.current = THREE.MathUtils.lerp(pitch.current, targetPitch, 0.1);

@@ -39,3 +39,11 @@ body {
 .action-item {
   opacity: 0;
 }
+
+/* SidebarPanel's pinned footer (e.g. Photos' GitHub button) sits outside
+   the scrollable area the reveal timeline above scans via ".content-block"
+   selectors, so it needs its own start-hidden rule — same reasoning as
+   the block above, just a separate class since it isn't part of that scan. */
+.panel-footer {
+  opacity: 0;
+}

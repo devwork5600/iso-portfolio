@@ -4,13 +4,29 @@ import { useProgress } from "@react-three/drei";
 import { gsap } from "gsap";
 import { useEffect, useRef, useState } from "react";
 import useExperienceUIStore from "@/store/useExperienceUIStore";
+import { useResponsiveStore } from "@/store/useResponsiveStore";
 
 // Ported from room4's Loader.tsx. Visual/animation code is unchanged; wired
 // into useExperienceUIStore now that NavPad/Sidebar/CameraManager exist and
 // need to react to load/enter state — a plain useEffect still covers the
 // one-shot flip/curtain animations (no @gsap/react needed here).
+//
+// Sized off useResponsiveStore's own mobile/tablet/desktop split, same
+// pattern as NavPad/Sidebar/SidebarPanel — mobile gets a smaller card
+// (was overflowing small viewports), tablet/desktop keep the original
+// 180x100 size. cardOffset is the card's vertical nudge (was a literal
+// -30px, tied to the old fixed height) and textSize/buttonPadding scale
+// down with it so the smaller card doesn't look cramped/mismatched.
+const SIZES = {
+  mobile: { width: 130, height: 68, cardOffset: -20, textSize: "text-lg", buttonPadding: "px-4 py-2" },
+  tablet: { width: 180, height: 100, cardOffset: -30, textSize: "text-2xl", buttonPadding: "px-6 py-3" },
+  desktop: { width: 180, height: 100, cardOffset: -30, textSize: "text-2xl", buttonPadding: "px-6 py-3" },
+};
+
 export function Loader() {
   const { progress } = useProgress();
+  const isMobile = useResponsiveStore((s) => s.isMobile);
+  const isTablet = useResponsiveStore((s) => s.isTablet);
   const setAssetsLoaded = useExperienceUIStore((s) => s.setAssetsLoaded);
   const setHasUserEntered = useExperienceUIStore((s) => s.setHasUserEntered);
   const setIntroFinished = useExperienceUIStore((s) => s.setIntroFinished);
@@ -65,12 +81,11 @@ export function Loader() {
 
   if (isDone) return null;
 
-  // Wide enough for "Chargement" at text-2xl with a little margin either
-  // side — bumped up from the original 120px, which fit "Loading" but
-  // overlapped the card's rounded-rect border once the French label (10
-  // chars vs. 7) took its place.
-  const width = 180;
-  const height = 100;
+  const { width, height, cardOffset, textSize, buttonPadding } = isMobile
+    ? SIZES.mobile
+    : isTablet
+      ? SIZES.tablet
+      : SIZES.desktop;
   const strokeWidth = 2;
   const perimeter = (width - strokeWidth) * 2 + (height - strokeWidth) * 2;
   const dashOffset = perimeter - (displayProgress / 100) * perimeter;
@@ -81,11 +96,11 @@ export function Loader() {
         ref={topRef}
         className="absolute top-0 right-0 left-0 flex h-[calc(50%+1px)] items-end justify-center bg-black"
       >
-        <div className="relative h-[100px]" style={{ width, perspective: "1000px" }}>
+        <div className="relative" style={{ width, height, perspective: "1000px" }}>
           <div
             ref={cardRef}
-            className="absolute top-[-30px] h-[100px] w-full text-2xl"
-            style={{ transformStyle: "preserve-3d", transformOrigin: "center center" }}
+            className={`absolute w-full ${textSize}`}
+            style={{ top: cardOffset, height, transformStyle: "preserve-3d", transformOrigin: "center center" }}
           >
             {/* FRONT SIDE */}
             <div
@@ -137,7 +152,7 @@ export function Loader() {
               <button
                 onClick={handleEnter}
                 disabled={!canEnter}
-                className={`pointer-events-auto h-full w-full rounded-md border-2 border-[#d8b18d] px-6 py-3 text-[#d8b18d] transition duration-300 ${
+                className={`pointer-events-auto h-full w-full rounded-md border-2 border-[#d8b18d] ${buttonPadding} text-[#d8b18d] transition duration-300 ${
                   canEnter
                     ? "hover:bg-[#d8b18d] hover:text-black cursor-pointer opacity-100"
                     : "opacity-0"

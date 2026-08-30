@@ -8,13 +8,6 @@ import { BASE_POSITION, BASE_TARGET } from "@/data/interactiveObjects";
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
-// Temporarily freezes tilt unconditionally (not just when a hotspot is
-// focused) while hand-tuning camera position/quaternion/zoom via
-// CameraGUI — the room's own independent mouse-move tilt made it hard to
-// get a stable read while dragging those sliders. Flip back to false once
-// tuning is done, to restore normal mouse-move parallax.
-const PARALLAX_DISABLED_FOR_TUNING = true;
-
 /**
  * Pointer-driven parallax tilt, ported from room4's RoomParallax.tsx. The
  * camera stays fixed and this group (the room) tilts toward the pointer.
@@ -48,7 +41,7 @@ export function RoomParallax({ children }: { children: ReactNode }) {
 
   useFrame(() => {
     if (!groupRef.current) return;
-    if (PARALLAX_DISABLED_FOR_TUNING || useInteractionStore.getState().clickedObject) return;
+    if (useInteractionStore.getState().clickedObject) return;
 
     // Kept modest so the room doesn't tilt past the grazing angle where the
     // camera's fixed rays overshoot the visible geometry near the bottom of

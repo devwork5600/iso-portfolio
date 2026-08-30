@@ -24,11 +24,29 @@ function toTransform(worldPoint: THREE.Vector3 | null, zoom: number): Transform 
   };
 }
 
-function deviceTransforms(worldPoint: THREE.Vector3 | null, desktopZoom: number) {
+// Per-device override for the deviceTransforms family: worldPoint stays
+// optional (falls back to the desktop worldPoint, keeping the same pan)
+// and zoom stays optional (falls back to the placeholder 0.82/0.65 scale
+// of desktop) — so a hotspot can get a fully independent tablet/mobile
+// shot (matching isoroom-v3's per-breakpoint hand-tuning) by supplying
+// just the fields that need to change from the placeholder default.
+interface PointDeviceOverride {
+  worldPoint?: THREE.Vector3 | null;
+  zoom?: number;
+}
+
+function deviceTransforms(
+  worldPoint: THREE.Vector3 | null,
+  desktopZoom: number,
+  overrides?: { tablet?: PointDeviceOverride; mobile?: PointDeviceOverride },
+) {
+  const tabletPoint = overrides?.tablet?.worldPoint !== undefined ? overrides.tablet.worldPoint : worldPoint;
+  const mobilePoint = overrides?.mobile?.worldPoint !== undefined ? overrides.mobile.worldPoint : worldPoint;
+
   return {
     desktop: toTransform(worldPoint, desktopZoom),
-    tablet: toTransform(worldPoint, desktopZoom * 0.82),
-    mobile: toTransform(worldPoint, desktopZoom * 0.65),
+    tablet: toTransform(tabletPoint, overrides?.tablet?.zoom ?? desktopZoom * 0.82),
+    mobile: toTransform(mobilePoint, overrides?.mobile?.zoom ?? desktopZoom * 0.65),
   };
 }
 
@@ -38,9 +56,6 @@ function deviceTransforms(worldPoint: THREE.Vector3 | null, desktopZoom: number)
 // of the file follows, but that's the point: some shots (e.g. a wall-mounted
 // object viewed flat-on) need their own free camera angle. Euler order
 // 'XYZ' matches CameraGUI's cam.rotation.set(x, y, z) (three.js's default).
-// Tablet/mobile aren't hand-tuned per breakpoint yet, so they reuse the
-// same desktop position/rotation and only scale zoom, same ratios as
-// deviceTransforms — replace with their own customTransform() once tuned.
 function customTransform(
   position: [number, number, number],
   eulerDeg: [number, number, number],
@@ -59,15 +74,35 @@ function customTransform(
   };
 }
 
+// Per-device override for customDeviceTransforms: position/eulerDeg/zoom
+// each fall back independently to their desktop value (position/eulerDeg)
+// or the placeholder 0.82/0.65 zoom scale — so a hotspot gets a fully
+// independent tablet/mobile shot (matching isoroom-v3's per-breakpoint
+// hand-tuning) by supplying just the fields that need to change.
+interface CustomDeviceOverride {
+  position?: [number, number, number];
+  eulerDeg?: [number, number, number];
+  zoom?: number;
+}
+
 function customDeviceTransforms(
   position: [number, number, number],
   eulerDeg: [number, number, number],
   desktopZoom: number,
+  overrides?: { tablet?: CustomDeviceOverride; mobile?: CustomDeviceOverride },
 ) {
   return {
     desktop: customTransform(position, eulerDeg, desktopZoom),
-    tablet: customTransform(position, eulerDeg, desktopZoom * 0.82),
-    mobile: customTransform(position, eulerDeg, desktopZoom * 0.65),
+    tablet: customTransform(
+      overrides?.tablet?.position ?? position,
+      overrides?.tablet?.eulerDeg ?? eulerDeg,
+      overrides?.tablet?.zoom ?? desktopZoom * 0.82,
+    ),
+    mobile: customTransform(
+      overrides?.mobile?.position ?? position,
+      overrides?.mobile?.eulerDeg ?? eulerDeg,
+      overrides?.mobile?.zoom ?? desktopZoom * 0.65,
+    ),
   };
 }
 
@@ -90,15 +125,32 @@ function customTransformQuat(
   };
 }
 
+// Same override shape as CustomDeviceOverride, but for the quaternion
+// variant (quaternion instead of eulerDeg).
+interface CustomDeviceOverrideQuat {
+  position?: [number, number, number];
+  quaternion?: [number, number, number, number];
+  zoom?: number;
+}
+
 function customDeviceTransformsQuat(
   position: [number, number, number],
   quaternion: [number, number, number, number],
   desktopZoom: number,
+  overrides?: { tablet?: CustomDeviceOverrideQuat; mobile?: CustomDeviceOverrideQuat },
 ) {
   return {
     desktop: customTransformQuat(position, quaternion, desktopZoom),
-    tablet: customTransformQuat(position, quaternion, desktopZoom * 0.82),
-    mobile: customTransformQuat(position, quaternion, desktopZoom * 0.65),
+    tablet: customTransformQuat(
+      overrides?.tablet?.position ?? position,
+      overrides?.tablet?.quaternion ?? quaternion,
+      overrides?.tablet?.zoom ?? desktopZoom * 0.82,
+    ),
+    mobile: customTransformQuat(
+      overrides?.mobile?.position ?? position,
+      overrides?.mobile?.quaternion ?? quaternion,
+      overrides?.mobile?.zoom ?? desktopZoom * 0.65,
+    ),
   };
 }
 
@@ -115,16 +167,35 @@ export interface IntroSetting {
 // it directly to zoom in/out on the home view.
 export const introSettings: IntroSetting[] = [
   { name: "IntroView", ...deviceTransforms(null, 16) },
-  { name: "InitialView", ...deviceTransforms(null, 47) },
+  // Tablet/mobile zoom hand-tuned live via CameraGUI (tablet at 1100x800,
+  // mobile at 844x390 landscape) — position/rotation stay untouched
+  // (worldPoint null -> baseFraming), since InitialView/IntroView are
+  // always the fixed base isometric shot.
+  { name: "InitialView", ...deviceTransforms(null, 47, { tablet: { zoom: 40.5 }, mobile: { zoom: 20 } }) },
 ];
 
 export interface TechItem {
   icon: string;
   name: string;
 }
+// Per-project button styling, so each Photos link can read like a tiny
+// piece of that site's own branding instead of one generic button style.
+// textColor/bgColor are raw site-brand colors (not app theme tokens, so
+// not Tailwind classes); borderRadius/font/fontSize/fontStyle are Tailwind
+// utility classes, same convention as the rest of this file's UI strings.
+export interface ProjectButtonStyle {
+  textColor: string;
+  bgColor: string;
+  borderRadius: string;
+  font: string;
+  fontSize: string;
+  fontStyle: string;
+}
+
 export interface ProjectItem {
   name: string;
   url: string;
+  style: ProjectButtonStyle;
 }
 export type InteractiveBlock =
   | { type: "text"; content: string }
@@ -139,17 +210,29 @@ export interface InteractiveObject {
   title: string;
   text?: string;
   blocks?: InteractiveBlock[];
+  /** Photos-only: link to the GitHub profile/repo, rendered as a button
+   *  at the bottom of its sidebar panel. */
+  githubUrl?: string;
 }
 
 // World positions of each hitbox's box center, from HitBoxes.tsx.
 const CONTACT_POS = new THREE.Vector3(5.317, 5.371, 7.335);
 
-// Placeholder zoom values — starting guesses, meant to be hand-tuned live
-// in-browser (the one genuinely per-hotspot constant that needs eyeballing).
+// Placeholder position/rotation/zoom values — starting guesses, meant to
+// be hand-tuned live in-browser at each breakpoint (resize to mobile/
+// tablet width, adjust via CameraGUI, paste the numbers back in here).
+// Tablet/mobile overrides below are dummy nudges in isoroom-v3's general
+// spirit (each breakpoint gets its own independently hand-tuned shot, not
+// just a scaled-down desktop zoom) — unverified in-browser, so treat the
+// position/rotation numbers with real skepticism, not just zoom.
 export const interactiveObjects: InteractiveObject[] = [
   {
     name: "Library",
-    ...customDeviceTransforms([7.2, 7.8, 4.861888696806017], [-1.8, 1.44, 0.36], 300),
+    ...customDeviceTransforms([7.2, 7.8, 4.861888696806017], [-1.8, 1.44, 0.36], 300, {
+      tablet: { position: [6.6, 7.8, 4.861888696806017], eulerDeg: [-1.8, 1.3, 0.36], zoom: 250 },
+      // Hand-tuned live via CameraGUI at 390x844 (iPhone 12 Pro).
+      mobile: { position: [6.5, 7.5, 4.8718], eulerDeg: [-1.8, 1.15, -0.1], zoom: 167 },
+    }),
     title: "Bibliothèque",
     blocks: [
       {
@@ -206,39 +289,133 @@ export const interactiveObjects: InteractiveObject[] = [
   },
   {
     name: "Clock",
-    ...customDeviceTransformsQuat([-4, 8.56, -1.47], [-0.00157, 0.726386, 0, 0.687284], 190),
+    ...customDeviceTransformsQuat([-4, 8.56, -1.47], [-0.00157, 0.726386, 0, 0.687284], 190, {
+      tablet: { position: [-3.6, 8.56, -1.3], zoom: 160 },
+      mobile: { position: [-3.2, 8.6, -1.1], zoom: 130 },
+    }),
     title: "Horloge",
     text: "Placeholder copy — a short note about timing, process, or whatever this corner is meant to represent.",
   },
   {
     name: "Particles",
-    ...customDeviceTransforms([5, 10, 4.861888696806017], [-1.8, 1.44, 0.3], 203),
+    ...customDeviceTransforms([5, 10, 4.861888696806017], [-1.8, 1.44, 0.3], 203, {
+      // Hand-tuned live via CameraGUI at 1100x800.
+      tablet: { position: [4.3, 9.6, 4.8618], eulerDeg: [-1.8, 1.3, 0.3], zoom: 162 },
+      // Hand-tuned live via CameraGUI at 390x844 (iPhone 12 Pro).
+      mobile: { position: [4, 9.8, 4.8618], eulerDeg: [-1.8, 1.15, 0.36], zoom: 106.5 },
+    }),
     title: "Particules",
-    text: "A morphing particle shader experiment, built with Three.js and custom GLSL — click to toggle between shapes. Placeholder copy — describe the technique here.",
+    text: "Une expérimentation de particules en morphing, réalisée avec Three.js et du GLSL sur-mesure — utilisez les boutons ci-dessous pour basculer entre les formes. Texte provisoire — à détailler.",
   },
   {
     name: "Contact",
-    ...deviceTransforms(CONTACT_POS, 160),
+    // Zoom hand-tuned live via CameraGUI at every tier (desktop at full
+    // window width, tablet at 1100x800, mobile at 844x390 landscape) —
+    // position/rotation confirmed unchanged from the desktop pan
+    // (frameHotspot toward CONTACT_POS) at every tier.
+    ...deviceTransforms(CONTACT_POS, 285.5, {
+      tablet: { zoom: 244.5 },
+      mobile: { zoom: 239 },
+    }),
     title: "Contact",
-    text: "Toujours ouvert à de nouveaux projets — n'hésitez pas à me contacter, ou récupérez mes coordonnées ci-dessous.",
+    text: "Entre deux lignes de code et une gorgée de café, je suis toujours ouvert à de nouveaux projets. Télécharge ma carte de visite pour qu'on en parle !",
   },
   {
     name: "Photos",
-    ...customDeviceTransforms([8.3, 8.4, 3], [-27, 89.64, 26.9], 160),
-    title: "Photos",
+    ...customDeviceTransforms([8.3, 8.4, 3], [-27, 89.64, 26.9], 190, {
+      // Hand-tuned live via CameraGUI at 1100x800.
+      tablet: { position: [2, 7.5, 2.7], eulerDeg: [-27, 100.44, 27], zoom: 164 },
+      // Hand-tuned live via CameraGUI at 390x844 (iPhone 12 Pro). Rotation
+      // read back within float noise of desktop's, so left unchanged.
+      mobile: { position: [-4, 8.2, 4], eulerDeg: [-27, 89.64, 26.9], zoom: 118 },
+    }),
+    title: "Projets",
+    githubUrl: "https://github.com/devwork5600",
     blocks: [
       {
         type: "text",
-        content: "A few real projects, framed on the wall. Swap these placeholder titles/links for the real ones.",
+        content:
+          "Explorez ma galerie : entre sites vitrines, boutiques en ligne et projets web interactifs, chaque création reflète une aventure unique.",
       },
       {
+        // Order matches the wall's Photo-1..5 mesh order in PartTwoModel.tsx
+        // (cocktail/cola/journal/lokko/nsfw) — each style pulled from that
+        // site's real deployed colors/fonts (extracted via getComputedStyle
+        // against the live page), not guessed.
         type: "projectList",
         items: [
-          { name: "Project One", url: "#" },
-          { name: "Project Two", url: "#" },
-          { name: "Project Three", url: "#" },
-          { name: "Project Four", url: "#" },
-          { name: "Project Five", url: "#" },
+          {
+            name: "L'Élixir Doré",
+            url: "https://cocktails-tan.vercel.app/",
+            style: {
+              textColor: "#d4af37",
+              bgColor: "#1a1410",
+              borderRadius: "rounded-md",
+              font: "font-serif",
+              fontSize: "text-lg",
+              fontStyle: "italic",
+            },
+          },
+          {
+            // Real site: deep maroon page, cream/maroon nav pills — bg/
+            // textColor already matched closely from that palette; radius
+            // brought down from a full pill per feedback.
+            name: "Breizh Cola",
+            url: "https://breizh-cola-fawn.vercel.app/",
+            style: {
+              textColor: "#ffffff",
+              bgColor: "#5d1622",
+              borderRadius: "rounded-lg",
+              font: "font-sans",
+              fontSize: "text-xl",
+              fontStyle: "not-italic",
+            },
+          },
+          {
+            // Real site ("La Voie de l'Info", an actualités/journal site):
+            // header/footer navy (#0e1b30) instead of the CTA's rust-orange
+            // — white text, sans (Geist — same family this app already
+            // uses), 6px radius, medium weight.
+            name: "La Voie de l'Info",
+            url: "https://la-voie-de-l-info-web-five.vercel.app/",
+            style: {
+              textColor: "#ffffff",
+              bgColor: "#0e1b30",
+              borderRadius: "rounded-md",
+              font: "font-sans font-medium",
+              fontSize: "text-sm",
+              fontStyle: "not-italic",
+            },
+          },
+          {
+            // Real site (Lokko marketplace): terracotta CTA (#c96442),
+            // white text, sans medium weight, ~6px radius.
+            name: "Lokko",
+            url: "https://www.lokkohub.com/",
+            style: {
+              textColor: "#ffffff",
+              bgColor: "#c96442",
+              borderRadius: "rounded-md",
+              font: "font-sans font-medium",
+              fontSize: "text-base",
+              fontStyle: "not-italic",
+            },
+          },
+          {
+            // Real site (NSFWGuard): blue accent (#5b8bd2), sharp 0px
+            // corners, semibold sans — textColor corrected from an
+            // earlier pink guess that didn't match anything on the site.
+            name: "NSFW Protect",
+            url: "https://nsfw-protect.com/",
+            style: {
+              textColor: "#5b8bd2",
+              bgColor: "#0d0d0d",
+              borderRadius: "rounded-none",
+              font: "font-sans font-semibold",
+              fontSize: "text-base",
+              fontStyle: "not-italic",
+            },
+          },
         ],
       },
     ],

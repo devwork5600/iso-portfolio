@@ -6,22 +6,37 @@ import { useEffect, useRef, useState } from "react";
 import useExperienceUIStore from "@/store/useExperienceUIStore";
 import { useResponsiveStore } from "@/store/useResponsiveStore";
 
-// Ported from room4's Loader.tsx. Visual/animation code is unchanged; wired
-// into useExperienceUIStore now that NavPad/Sidebar/CameraManager exist and
-// need to react to load/enter state — a plain useEffect still covers the
-// one-shot flip/curtain animations (no @gsap/react needed here).
+// Ported from room4's Loader.tsx, then reworked: the original was a 3D
+// flip card (rotateX + preserve-3d + backface-visibility) where the whole
+// card — frame and label both — rotated to swap "Chargement" for "Entrer".
+// Firefox has a confirmed single-frame rasterization glitch on that combo
+// — right as the back face crossed into view at a steep angle, it painted
+// as a flat filled block before the border/text caught up on the next
+// frame (verified by frame-stepping a slowed-down recording; not a
+// CSS/hover-state bug — several rounds of will-change/opacity/visibility
+// mitigations reduced but never eliminated it).
+//
+// Now the frame (the button + its progress-ring border) never moves at
+// all — only the label inside rolls from "Chargement" to "Entrer", via a
+// plain vertical translateY (with a Z dip at the midpoint for a
+// cylinder-roll depth cue). No rotation, no backface anywhere, so that
+// whole class of Firefox bug no longer applies. The button stays
+// disabled/non-interactive until the roll finishes and "Entrer" has fully
+// settled into place.
 //
 // Sized off useResponsiveStore's own mobile/tablet/desktop split, same
 // pattern as NavPad/Sidebar/SidebarPanel — mobile gets a smaller card
 // (was overflowing small viewports), tablet/desktop keep the original
-// 180x100 size. cardOffset is the card's vertical nudge (was a literal
-// -30px, tied to the old fixed height) and textSize/buttonPadding scale
-// down with it so the smaller card doesn't look cramped/mismatched.
+// 180x100 size. lineHeight is the rolling text window's height (one row);
+// cardOffset is the frame's vertical nudge (was a literal -30px, tied to
+// the old fixed height).
 const SIZES = {
-  mobile: { width: 130, height: 68, cardOffset: -20, textSize: "text-lg", buttonPadding: "px-4 py-2" },
-  tablet: { width: 180, height: 100, cardOffset: -30, textSize: "text-2xl", buttonPadding: "px-6 py-3" },
-  desktop: { width: 180, height: 100, cardOffset: -30, textSize: "text-2xl", buttonPadding: "px-6 py-3" },
+  mobile: { width: 130, height: 68, cardOffset: -20, textSize: "text-lg", lineHeight: 24 },
+  tablet: { width: 180, height: 100, cardOffset: -30, textSize: "text-2xl", lineHeight: 32 },
+  desktop: { width: 180, height: 100, cardOffset: -30, textSize: "text-2xl", lineHeight: 32 },
 };
+
+const ROLL_DEPTH = 12; // px the label recedes (translateZ) at the midpoint of the roll
 
 export function Loader() {
   const { progress } = useProgress();
@@ -32,12 +47,13 @@ export function Loader() {
   const setIntroFinished = useExperienceUIStore((s) => s.setIntroFinished);
   const setExperienceStarted = useExperienceUIStore((s) => s.setExperienceStarted);
   const [displayProgress, setDisplayProgress] = useState(0);
+  const [rolling, setRolling] = useState(false);
   const [canEnter, setCanEnter] = useState(false);
   const [isDone, setIsDone] = useState(false);
 
   const topRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const rollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -47,20 +63,33 @@ export function Loader() {
   }, [progress]);
 
   useEffect(() => {
-    if (progress === 100 && cardRef.current && !canEnter) {
-      setCanEnter(true);
+    if (progress === 100 && rollRef.current && !rolling) {
+      setRolling(true);
       setAssetsLoaded(true);
 
-      gsap.to(cardRef.current, {
-        rotationX: -180,
-        transformOrigin: "center center",
-        force3D: true,
+      // rollRef holds both labels stacked (Chargement, then Entrer) — -50%
+      // of its own height is exactly one row's worth of travel. z is
+      // driven off the same progress via a sine arc (0 at both ends,
+      // -ROLL_DEPTH at the midpoint) for the cylinder-roll depth cue —
+      // needs the button's `perspective` (below) to read visually. Only
+      // flips canEnter once the roll has actually finished settling.
+      const state = { t: 0 };
+      gsap.to(state, {
+        t: 1,
         duration: 1,
         ease: "power2.inOut",
         delay: 0.5,
+        onUpdate: () => {
+          if (!rollRef.current) return;
+          gsap.set(rollRef.current, {
+            yPercent: -50 * state.t,
+            z: -ROLL_DEPTH * Math.sin(state.t * Math.PI),
+          });
+        },
+        onComplete: () => setCanEnter(true),
       });
     }
-  }, [progress, canEnter]);
+  }, [progress, rolling]);
 
   const handleEnter = () => {
     if (!topRef.current || !bottomRef.current) return;
@@ -81,7 +110,7 @@ export function Loader() {
 
   if (isDone) return null;
 
-  const { width, height, cardOffset, textSize, buttonPadding } = isMobile
+  const { width, height, cardOffset, textSize, lineHeight } = isMobile
     ? SIZES.mobile
     : isTablet
       ? SIZES.tablet
@@ -96,73 +125,70 @@ export function Loader() {
         ref={topRef}
         className="absolute top-0 right-0 left-0 flex h-[calc(50%+1px)] items-end justify-center bg-black"
       >
-        <div className="relative" style={{ width, height, perspective: "1000px" }}>
-          <div
-            ref={cardRef}
-            className={`absolute w-full ${textSize}`}
-            style={{ top: cardOffset, height, transformStyle: "preserve-3d", transformOrigin: "center center" }}
-          >
-            {/* FRONT SIDE */}
-            <div
-              className="absolute flex h-full w-full items-center justify-center text-[#d8b18d]"
-              style={{ backfaceVisibility: "hidden", transform: "translateZ(0)" }}
+        <button
+          onClick={handleEnter}
+          disabled={!canEnter}
+          // canEnter only flips true once the roll animation has finished —
+          // a page that's already 100% loaded on mount briefly renders the
+          // button disabled either way, so this can't diverge from SSR.
+          // border-2 only kicks in once canEnter — before that the SVG
+          // progress ring below draws the border instead, so the two don't
+          // double up.
+          className={`pointer-events-auto relative flex items-center justify-center rounded-md text-[#d8b18d] transition-colors duration-300 ${
+            canEnter
+              ? "border-2 border-[#d8b18d] hover:bg-[#d8b18d] hover:text-black cursor-pointer"
+              : ""
+          }`}
+          style={{ top: cardOffset, width, height, perspective: 600 }}
+        >
+          {!canEnter && (
+            <svg
+              width={width}
+              height={height}
+              viewBox={`0 0 ${width} ${height}`}
+              className="pointer-events-none absolute inset-0"
             >
-              <svg
-                width={width}
-                height={height}
-                viewBox={`0 0 ${width} ${height}`}
-                className="absolute"
-              >
-                <rect
-                  x={strokeWidth / 2}
-                  y={strokeWidth / 2}
-                  width={width - strokeWidth}
-                  height={height - strokeWidth}
-                  rx="6"
-                  ry="6"
-                  stroke="currentColor"
-                  strokeOpacity={0.2}
-                  strokeWidth={strokeWidth}
-                  fill="none"
-                />
-                <rect
-                  x={strokeWidth / 2}
-                  y={strokeWidth / 2}
-                  width={width - strokeWidth}
-                  height={height - strokeWidth}
-                  rx="6"
-                  ry="6"
-                  stroke="currentColor"
-                  strokeWidth={strokeWidth}
-                  fill="none"
-                  strokeDasharray={perimeter}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                  style={{ transition: "stroke-dashoffset 0.3s ease" }}
-                />
-              </svg>
-              <span className="pointer-events-auto text-[#d8b18d]">Chargement</span>
-            </div>
+              <rect
+                x={strokeWidth / 2}
+                y={strokeWidth / 2}
+                width={width - strokeWidth}
+                height={height - strokeWidth}
+                rx="6"
+                ry="6"
+                stroke="currentColor"
+                strokeOpacity={0.2}
+                strokeWidth={strokeWidth}
+                fill="none"
+              />
+              <rect
+                x={strokeWidth / 2}
+                y={strokeWidth / 2}
+                width={width - strokeWidth}
+                height={height - strokeWidth}
+                rx="6"
+                ry="6"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeDasharray={perimeter}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                style={{ transition: "stroke-dashoffset 0.3s ease" }}
+              />
+            </svg>
+          )}
 
-            {/* BACK SIDE */}
-            <div
-              className="absolute flex h-full w-full items-center justify-center"
-              style={{ transform: "rotateX(180deg) translateZ(0)", backfaceVisibility: "hidden" }}
-            >
-              <button
-                onClick={handleEnter}
-                disabled={!canEnter}
-                className={`pointer-events-auto h-full w-full rounded-md border-2 border-[#d8b18d] ${buttonPadding} text-[#d8b18d] transition duration-300 ${
-                  canEnter
-                    ? "hover:bg-[#d8b18d] hover:text-black cursor-pointer opacity-100"
-                    : "opacity-0"
-                }`}
-              >
+          <div className={`relative overflow-hidden ${textSize}`} style={{ width: "100%", height: lineHeight }}>
+            <div ref={rollRef} className="absolute inset-x-0 top-0">
+              <div className="flex items-center justify-center" style={{ height: lineHeight }}>
+                Chargement
+              </div>
+              <div className="flex items-center justify-center" style={{ height: lineHeight }}>
                 Entrer
-              </button>
+              </div>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       <div

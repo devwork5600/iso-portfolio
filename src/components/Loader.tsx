@@ -2,7 +2,7 @@
 
 import { useProgress } from "@react-three/drei";
 import { gsap } from "gsap";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useExperienceUIStore from "@/store/useExperienceUIStore";
 import { useResponsiveStore } from "@/store/useResponsiveStore";
 
@@ -38,8 +38,13 @@ const SIZES = {
 
 const ROLL_DEPTH = 12; // px the label recedes (translateZ) at the midpoint of the roll
 
+// Failsafe: if the loading state never resolves (see the useProgress race
+// documented below), force the reveal after this long regardless — no
+// visitor should ever be stuck on "Chargement" forever.
+const FAILSAFE_MS = 15000;
+
 export function Loader() {
-  const { progress } = useProgress();
+  const { progress, total, loaded, active } = useProgress();
   const isMobile = useResponsiveStore((s) => s.isMobile);
   const isTablet = useResponsiveStore((s) => s.isTablet);
   const setAssetsLoaded = useExperienceUIStore((s) => s.setAssetsLoaded);
@@ -54,6 +59,10 @@ export function Loader() {
   const topRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const rollRef = useRef<HTMLDivElement>(null);
+  // Mirrors `rolling` state but readable synchronously from the failsafe
+  // timeout's closure below, which is fixed at mount (empty deps) and would
+  // otherwise always see the stale initial `false` — a ref sidesteps that.
+  const rollingRef = useRef(false);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -62,34 +71,59 @@ export function Loader() {
     return () => cancelAnimationFrame(id);
   }, [progress]);
 
-  useEffect(() => {
-    if (progress === 100 && rollRef.current && !rolling) {
-      setRolling(true);
-      setAssetsLoaded(true);
+  const startRoll = useCallback(() => {
+    if (!rollRef.current || rollingRef.current) return;
+    rollingRef.current = true;
+    setRolling(true);
+    setAssetsLoaded(true);
 
-      // rollRef holds both labels stacked (Chargement, then Entrer) — -50%
-      // of its own height is exactly one row's worth of travel. z is
-      // driven off the same progress via a sine arc (0 at both ends,
-      // -ROLL_DEPTH at the midpoint) for the cylinder-roll depth cue —
-      // needs the button's `perspective` (below) to read visually. Only
-      // flips canEnter once the roll has actually finished settling.
-      const state = { t: 0 };
-      gsap.to(state, {
-        t: 1,
-        duration: 1,
-        ease: "power2.inOut",
-        delay: 0.5,
-        onUpdate: () => {
-          if (!rollRef.current) return;
-          gsap.set(rollRef.current, {
-            yPercent: -50 * state.t,
-            z: -ROLL_DEPTH * Math.sin(state.t * Math.PI),
-          });
-        },
-        onComplete: () => setCanEnter(true),
-      });
-    }
-  }, [progress, rolling]);
+    // rollRef holds both labels stacked (Chargement, then Entrer) — -50%
+    // of its own height is exactly one row's worth of travel. z is driven
+    // off the same progress via a sine arc (0 at both ends, -ROLL_DEPTH at
+    // the midpoint) for the cylinder-roll depth cue — needs the button's
+    // `perspective` (below) to read visually. Only flips canEnter once the
+    // roll has actually finished settling.
+    const state = { t: 0 };
+    gsap.to(state, {
+      t: 1,
+      duration: 1,
+      ease: "power2.inOut",
+      delay: 0.5,
+      onUpdate: () => {
+        if (!rollRef.current) return;
+        gsap.set(rollRef.current, {
+          yPercent: -50 * state.t,
+          z: -ROLL_DEPTH * Math.sin(state.t * Math.PI),
+        });
+      },
+      onComplete: () => setCanEnter(true),
+    });
+  }, [setAssetsLoaded]);
+
+  useEffect(() => {
+    // useProgress's `progress` percentage is computed off a module-level
+    // running total (drei's Progress.js `saveLastTotalLoaded`) meant to
+    // reset between loading "waves" — but useGLTF.preload() in each
+    // Part*Model.tsx fires at module-eval time, before this component ever
+    // mounts. If that preload wave finishes fast (warm HTTP cache — the
+    // actual failure mode seen: every asset resolved in under 250ms), the
+    // component tree's own useGLTF/useTexture calls hit R3F's resource
+    // cache and resolve without touching the loading manager again, so no
+    // further onProgress ever fires — `progress` can get stuck at whatever
+    // non-100 value that first wave left behind, forever. `loaded`/`total`
+    // are the raw manager item counts backing that percentage and aren't
+    // subject to the same reset-math bug, so prefer them; `!active` catches
+    // it via onLoad regardless of what the percentage says.
+    const isFullyLoaded = total > 0 && loaded >= total && !active;
+    if ((progress === 100 || isFullyLoaded) && !rolling) startRoll();
+  }, [progress, total, loaded, active, rolling, startRoll]);
+
+  useEffect(() => {
+    // startRoll's own rollingRef guard (not React state) makes this safe to
+    // call unconditionally even if normal completion already fired by then.
+    const id = setTimeout(startRoll, FAILSAFE_MS);
+    return () => clearTimeout(id);
+  }, [startRoll]);
 
   const handleEnter = () => {
     if (!topRef.current || !bottomRef.current) return;

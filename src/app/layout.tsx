@@ -12,9 +12,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://adrien-delagneau.fr";
+const TITLE = "devwork5600 — Portfolio 3D";
+const DESCRIPTION = "Portfolio 3D interactif présentant mes projets, compétences et coordonnées.";
+
 export const metadata: Metadata = {
-  title: "Portfolio 3D",
-  description: "Portfolio 3D interactif présentant mes projets, compétences et coordonnées.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
+    siteName: TITLE,
+    locale: "fr_FR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

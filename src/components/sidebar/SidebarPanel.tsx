@@ -164,8 +164,12 @@ export function SidebarPanel({ object, children, footer }: SidebarPanelProps) {
                     href={item.url}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ color: item.style.textColor, backgroundColor: item.style.bgColor }}
-                    className={`project-item ${item.style.borderRadius} ${item.style.font} ${item.style.fontSize} ${item.style.fontStyle} flex h-12 items-center justify-center px-4 text-center font-semibold shadow-xs transition-transform hover:scale-[1.02]`}
+                    style={{
+                      color: item.style.textColor,
+                      backgroundColor: item.style.bgColor,
+                      borderColor: item.style.borderColor ?? "transparent",
+                    }}
+                    className={`project-item ${item.style.borderRadius} ${item.style.font} ${item.style.fontSize} ${item.style.fontStyle} flex h-12 items-center justify-center border px-4 text-center font-semibold shadow-xs transition-transform hover:scale-[1.02]`}
                   >
                     <span className="truncate">{item.name}</span>
                   </a>

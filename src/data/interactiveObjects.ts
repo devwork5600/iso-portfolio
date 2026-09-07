@@ -190,6 +190,10 @@ export interface ProjectButtonStyle {
   font: string;
   fontSize: string;
   fontStyle: string;
+  /** Optional border, same color as textColor — for entries whose bgColor
+   *  is too close to the sidebar's own background to read as a distinct
+   *  button (L'Élixir Doré, NSFW Protect). */
+  borderColor?: string;
 }
 
 export interface ProjectItem {
@@ -352,7 +356,7 @@ export const interactiveObjects: InteractiveObject[] = [
         items: [
           {
             name: "L'Élixir Doré",
-            url: "https://cocktails-tan.vercel.app/",
+            url: "https://cocktail-v4.vercel.app/",
             style: {
               textColor: "#d4af37",
               bgColor: "#1a1410",
@@ -360,6 +364,9 @@ export const interactiveObjects: InteractiveObject[] = [
               font: "font-serif",
               fontSize: "text-lg",
               fontStyle: "italic",
+              // bgColor barely contrasts against the sidebar's own
+              // near-black background — border makes the button legible.
+              borderColor: "#d4af37",
             },
           },
           {
@@ -367,7 +374,7 @@ export const interactiveObjects: InteractiveObject[] = [
             // textColor already matched closely from that palette; radius
             // brought down from a full pill per feedback.
             name: "Breizh Cola",
-            url: "https://breizh-cola-fawn.vercel.app/",
+            url: "https://breizh-cola-v3.vercel.app/",
             style: {
               textColor: "#ffffff",
               bgColor: "#5d1622",
@@ -389,14 +396,15 @@ export const interactiveObjects: InteractiveObject[] = [
               bgColor: "#0e1b30",
               borderRadius: "rounded-md",
               font: "font-sans font-medium",
-              fontSize: "text-sm",
+              fontSize: "text-md",
               fontStyle: "not-italic",
+              borderColor: "#ffffff",
             },
           },
           {
             // Real site (Lokko marketplace): terracotta CTA (#c96442),
             // white text, sans medium weight, ~6px radius.
-            name: "Lokko",
+            name: "Lokko Hub",
             url: "https://www.lokkohub.com/",
             style: {
               textColor: "#ffffff",
@@ -420,6 +428,9 @@ export const interactiveObjects: InteractiveObject[] = [
               font: "font-sans font-semibold",
               fontSize: "text-base",
               fontStyle: "not-italic",
+              // bgColor barely contrasts against the sidebar's own
+              // near-black background — border makes the button legible.
+              borderColor: "#5b8bd2",
             },
           },
         ],
